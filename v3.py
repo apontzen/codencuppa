@@ -1,4 +1,7 @@
 from abc import ABC, abstractmethod
+from transformers import pipeline
+
+import torch
 
 
 class PrimeFinder(ABC):
@@ -7,7 +10,7 @@ class PrimeFinder(ABC):
     """
 
     @abstractmethod
-    def find_primes_up_to(self, maximum):
+    def find_primes_up_to(self, maximum: int) -> list[int]:
         """
         Finds all prime numbers up to a given maximum.
 
@@ -25,16 +28,7 @@ class SievePrimeFinder(PrimeFinder):
     Implementation of PrimeFinder using the Sieve of Eratosthenes.
     """
 
-    def find_primes_up_to(self, maximum):
-        """
-        Finds all prime numbers up to a given maximum using the Sieve of Eratosthenes.
-
-        Parameters:
-            maximum (int): The upper limit for finding prime numbers.
-
-        Returns:
-            list[int]: A list of all prime numbers up to the given maximum.
-        """
+    def find_primes_up_to(self, maximum: int) -> list[int]:
         if maximum < 2:
             return []
 
@@ -48,7 +42,7 @@ class SievePrimeFinder(PrimeFinder):
         return self._extract_primes(is_prime)
 
     @staticmethod
-    def _initialize_prime_list(size):
+    def _initialize_prime_list(size: int) -> list[bool]:
         """
         Creates a list representing the primality of numbers from 0 to `size`.
 
@@ -63,7 +57,7 @@ class SievePrimeFinder(PrimeFinder):
         return prime_list
 
     @staticmethod
-    def _sieve_non_primes(prime_list, limit):
+    def _sieve_non_primes(prime_list: list[bool], limit: int):
         """
         Marks multiples of each prime number as non-prime in the prime list.
 
@@ -77,7 +71,7 @@ class SievePrimeFinder(PrimeFinder):
                     prime_list[multiple] = False
 
     @staticmethod
-    def _extract_primes(prime_list):
+    def _extract_primes(prime_list: list[bool]) -> list[int]:
         """
         Extracts the list of numbers marked as prime.
 
@@ -96,19 +90,7 @@ class TrialDivisionPrimeFinder(PrimeFinder):
     Implementation of PrimeFinder using the Trial Division algorithm.
     """
 
-    def find_primes_up_to(self, maximum):
-        """
-        Finds all prime numbers up to a given maximum using Trial Division.
-
-        Parameters:
-            maximum (int): The upper limit for finding prime numbers.
-
-        Returns:
-            list[int]: A list of all prime numbers up to the given maximum.
-        """
-        if maximum < 2:
-            return []
-
+    def find_primes_up_to(self, maximum: int) -> list[int]:
         primes = []
         for number in range(2, maximum + 1):
             if self._is_prime(number):
@@ -116,7 +98,7 @@ class TrialDivisionPrimeFinder(PrimeFinder):
         return primes
 
     @staticmethod
-    def _is_prime(number):
+    def _is_prime(number) -> bool:
         """
         Determines if a number is prime using Trial Division.
 
@@ -140,13 +122,11 @@ class StoredPrimeFinder(PrimeFinder):
     _primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]
     _max_val = 100
 
-    def find_primes_up_to(self, maximum):
+    def find_primes_up_to(self, maximum) -> list[int]:
         if maximum > self._max_val:
             raise ValueError(f"Stored primes only go up to {self._max_val}")
         return [prime for prime in self._primes if prime <= maximum]
 
-from transformers import pipeline
-import torch
 
 class LLMPrimeFinder(PrimeFinder):
     """
@@ -165,16 +145,16 @@ class LLMPrimeFinder(PrimeFinder):
     def __init__(self):
         self._pipeline = pipeline('text-generation', model=self.model_id, device=torch.device('mps'))
 
-    def find_primes_up_to(self, maximum):
+    def find_primes_up_to(self, maximum: int) -> list[int]:
         messages = self._get_llm_input_prompts(maximum)
         outputs = self._run_llm(messages)
         return self._llm_output_to_primes_list(outputs)
 
-    def _run_llm(self, messages):
+    def _run_llm(self, messages) -> list[dict]:
         outputs = self._pipeline(messages, max_new_tokens=256)
         return outputs
 
-    def _get_llm_input_prompts(self, maximum):
+    def _get_llm_input_prompts(self, maximum: int) -> list[dict]:
         messages = [
             {"role": "system",
              "content": self.system_prompt},
@@ -183,11 +163,11 @@ class LLMPrimeFinder(PrimeFinder):
         ]
         return messages
 
-    def _llm_output_to_primes_list(self, llm_output):
+    def _llm_output_to_primes_list(self, llm_output: list[dict]) -> list[int]:
         generated_primes_str = llm_output[0]['generated_text'][-1]['content']
         return self._parse_primes_string(generated_primes_str)
 
-    def _parse_primes_string(self, primes_str):
+    def _parse_primes_string(self, primes_str: str) -> list[int]:
         return [int(x) for x in primes_str.split()]
 
 
